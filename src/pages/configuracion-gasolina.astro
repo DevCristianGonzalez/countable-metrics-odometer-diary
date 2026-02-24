@@ -1,0 +1,93 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Configuración de gasolina">
+  <h1>Configuración de gasolina</h1>
+  <p>
+    Define aquí cuántos kilómetros haces por galón de gasolina y el precio
+    actual del galón.
+  </p>
+
+  <form id="form-config-gasolina">
+    <div>
+      <label for="kmPorGalon">Kilómetros por galón</label>
+      <input id="kmPorGalon" type="number" min="0" step="0.1" required />
+    </div>
+
+    <div>
+      <label for="precioGalon">Precio por galón (COP)</label>
+      <input
+        id="precioGalon"
+        type="number"
+        min="0"
+        step="0.001"
+        required
+      />
+      <small>Ejemplo: 15.205</small>
+    </div>
+
+    <button type="submit">Guardar configuración</button>
+  </form>
+
+  <script type="module">
+    const FORM_ID = 'form-config-gasolina';
+    const STORAGE_KEY = 'configGasolina';
+
+    const form = document.getElementById(FORM_ID);
+    const kmPorGalonInput = document.getElementById('kmPorGalon');
+    const precioGalonInput = document.getElementById('precioGalon');
+
+    function tieneMasDeTresDecimales(valor) {
+      const partes = String(valor).split('.');
+      return partes[1] && partes[1].length > 3;
+    }
+
+    if (form && kmPorGalonInput && precioGalonInput) {
+      // Cargar valores guardados
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.kmPorGalon != null) {
+            kmPorGalonInput.value = String(parsed.kmPorGalon);
+          }
+          if (parsed.precioGalon != null) {
+            precioGalonInput.value = String(parsed.precioGalon);
+          }
+        } catch (e) {
+          console.error('Error leyendo config gasolina', e);
+        }
+      }
+
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const kmPorGalon = Number(kmPorGalonInput.value);
+        const precioGalonRaw = precioGalonInput.value;
+        const precioGalon = Number(precioGalonRaw);
+
+        if (isNaN(kmPorGalon) || kmPorGalon <= 0) {
+          alert('Introduce un valor válido de kilómetros por galón.');
+          return;
+        }
+
+        if (isNaN(precioGalon) || precioGalon <= 0) {
+          alert('Introduce un precio por galón válido.');
+          return;
+        }
+
+        if (tieneMasDeTresDecimales(precioGalonRaw)) {
+          alert('El precio solo puede tener hasta 3 decimales (ej: 15.205).');
+          return;
+        }
+
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ kmPorGalon, precioGalon })
+        );
+
+        alert('Configuración de gasolina guardada.');
+      });
+    }
+  </script>
+</BaseLayout>

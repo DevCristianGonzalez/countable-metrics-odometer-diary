@@ -1,0 +1,133 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Resumen mensual">
+  <h1>Resumen mensual</h1>
+  <p>
+    Aquí puedes ver un resumen por mes de kilómetros recorridos, consumo de
+    gasolina y costo estimado.
+  </p>
+
+  <section id="resumen-tabla-section" style="margin-top: 1.5rem;">
+    <h2>Totales por mes</h2>
+    <table class="tabla">
+      <thead>
+        <tr>
+          <th>Mes</th>
+          <th>Kilómetros totales</th>
+          <th>Galones usados</th>
+          <th>Costo gasolina (COP)</th>
+        </tr>
+      </thead>
+      <tbody id="resumen-tabla-body"></tbody>
+    </table>
+  </section>
+
+  <section id="resumen-grafico-section" style="margin-top: 2rem;">
+    <h2>Costo mensual (gráfico)</h2>
+    <div id="grafico-barras-contenedor" class="grafico-barras"></div>
+  </section>
+
+  <script type="module">
+    const STORAGE_RESUMEN_MENSUAL_GASOLINA = 'resumenMensualGasolina';
+
+    function leerJSONSeguro(key, fallback) {
+      const raw = localStorage.getItem(key);
+      if (!raw) return fallback;
+      try {
+        return JSON.parse(raw);
+      } catch (e) {
+        console.error('Error leyendo', key, e);
+        return fallback;
+      }
+    }
+
+    const tablaBody = document.getElementById('resumen-tabla-body');
+    const graficoContenedor = document.getElementById(
+      'grafico-barras-contenedor'
+    );
+
+    function formatearMes(m) {
+      // m viene como YYYY-MM
+      const [anio, mes] = m.split('-');
+      const nombres = [
+        'Enero',
+        'Febrero',
+        'Marzo',
+        'Abril',
+        'Mayo',
+        'Junio',
+        'Julio',
+        'Agosto',
+        'Septiembre',
+        'Octubre',
+        'Noviembre',
+        'Diciembre'
+      ];
+      const idx = Number(mes) - 1;
+      const nombreMes = nombres[idx] || mes;
+      return `${nombreMes} ${anio}`;
+    }
+
+    function renderTabla(resumen) {
+      if (!tablaBody) return;
+      const meses = Object.keys(resumen).sort();
+      if (!meses.length) {
+        tablaBody.innerHTML =
+          '<tr><td colspan="4">No hay datos aún. Registra kilometraje para ver el resumen.</td></tr>';
+        return;
+      }
+
+      tablaBody.innerHTML = meses
+        .map((m) => {
+          const r = resumen[m];
+          return `
+          <tr>
+            <td>${formatearMes(m)}</td>
+            <td>${r.kmTotales.toFixed(1)}</td>
+            <td>${r.galonesTotales.toFixed(3)}</td>
+            <td>${r.costoTotal.toFixed(0)}</td>
+          </tr>
+        `;
+        })
+        .join('');
+    }
+
+    function renderGrafico(resumen) {
+      if (!graficoContenedor) return;
+      const meses = Object.keys(resumen).sort();
+      if (!meses.length) {
+        graficoContenedor.innerHTML = '<p>No hay datos para mostrar.</p>';
+        return;
+      }
+
+      const maxCosto = Math.max(
+        ...meses.map((m) => resumen[m].costoTotal || 0),
+        1
+      );
+
+      graficoContenedor.innerHTML = meses
+        .map((m) => {
+          const r = resumen[m];
+          const altura = (r.costoTotal / maxCosto) * 100; // porcentaje
+          return `
+          <div class="barra">
+            <div class="barra-fill" style="height:${altura}%;"></div>
+            <span class="barra-label">${m}</span>
+          </div>
+        `;
+        })
+        .join('');
+    }
+
+    function init() {
+      const resumen = leerJSONSeguro(STORAGE_RESUMEN_MENSUAL_GASOLINA, {});
+      renderTabla(resumen);
+      renderGrafico(resumen);
+    }
+
+    init();
+  </script>
+</BaseLayout>
+
