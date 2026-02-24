@@ -6,7 +6,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   <h1>Configuración de gasolina</h1>
   <p>
     Define aquí cuántos kilómetros haces por galón de gasolina y el precio
-    actual del galón.
+    actual del galón. A partir de estos datos calculamos también las recargas
+    necesarias.
   </p>
 
   <form id="form-config-gasolina">
@@ -33,6 +34,14 @@ import BaseLayout from '../layouts/BaseLayout.astro';
   <script type="module">
     const FORM_ID = 'form-config-gasolina';
     const STORAGE_KEY = 'configGasolina';
+
+    function showAlert(options) {
+      if (window.Swal) {
+        window.Swal.fire(options);
+      } else {
+        alert(options.text || options.title || 'Ocurrió un error.');
+      }
+    }
 
     const form = document.getElementById(FORM_ID);
     const kmPorGalonInput = document.getElementById('kmPorGalon');
@@ -67,17 +76,29 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         const precioGalon = Number(precioGalonRaw);
 
         if (isNaN(kmPorGalon) || kmPorGalon <= 0) {
-          alert('Introduce un valor válido de kilómetros por galón.');
+          showAlert({
+            icon: 'error',
+            title: 'Dato inválido',
+            text: 'Introduce un valor válido de kilómetros por galón.'
+          });
           return;
         }
 
         if (isNaN(precioGalon) || precioGalon <= 0) {
-          alert('Introduce un precio por galón válido.');
+          showAlert({
+            icon: 'error',
+            title: 'Dato inválido',
+            text: 'Introduce un precio por galón válido.'
+          });
           return;
         }
 
         if (tieneMasDeTresDecimales(precioGalonRaw)) {
-          alert('El precio solo puede tener hasta 3 decimales (ej: 15.205).');
+          showAlert({
+            icon: 'error',
+            title: 'Dato inválido',
+            text: 'El precio solo puede tener hasta 3 decimales (ej: 15.205).'
+          });
           return;
         }
 
@@ -86,7 +107,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           JSON.stringify({ kmPorGalon, precioGalon })
         );
 
-        alert('Configuración de gasolina guardada.');
+        showAlert({
+          icon: 'success',
+          title: 'Guardado',
+          text: 'Configuración de gasolina guardada correctamente.'
+        });
       });
     }
   </script>

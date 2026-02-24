@@ -87,7 +87,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             <td>${formatearMes(m)}</td>
             <td>${r.kmTotales.toFixed(1)}</td>
             <td>${r.galonesTotales.toFixed(3)}</td>
-            <td>${r.costoTotal.toFixed(0)}</td>
+            <td>${r.costoTotal.toFixed(3)}</td>
           </tr>
         `;
         })
@@ -103,18 +103,20 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       }
 
       const maxCosto = Math.max(
-        ...meses.map((m) => resumen[m].costoTotal || 0),
+        ...meses.map((m) => Number(resumen[m].costoTotal) || 0),
         1
       );
 
       graficoContenedor.innerHTML = meses
         .map((m) => {
           const r = resumen[m];
-          const altura = (r.costoTotal / maxCosto) * 100; // porcentaje
+          const costo = Number(r.costoTotal) || 0;
+          const alturaBase = (costo / maxCosto) * 100; // porcentaje
+          const altura = costo > 0 ? Math.max(alturaBase, 8) : 0;
           return `
           <div class="barra">
             <div class="barra-fill" style="height:${altura}%;"></div>
-            <span class="barra-label">${m}</span>
+            <span class="barra-label">${formatearMes(m)}</span>
           </div>
         `;
         })

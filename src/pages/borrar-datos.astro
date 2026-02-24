@@ -1,0 +1,138 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Borrar datos">
+  <h1>Borrar datos</h1>
+  <p>
+    Selecciona qué información quieres borrar del dispositivo. Esta acción solo
+    afecta los datos guardados en este navegador.
+  </p>
+
+  <form id="form-borrar-datos">
+    <div>
+      <label>
+        <input type="checkbox" id="chk-kilometraje" />
+        Registros de kilometraje diario
+      </label>
+    </div>
+
+    <div>
+      <label>
+        <input type="checkbox" id="chk-config-gasolina" />
+        Configuración de gasolina
+      </label>
+    </div>
+
+    <div>
+      <label>
+        <input type="checkbox" id="chk-config-aceite" />
+        Configuración de aceite
+      </label>
+    </div>
+
+    <div>
+      <label>
+        <input type="checkbox" id="chk-resumen" />
+        Resumen mensual de gasolina
+      </label>
+    </div>
+
+    <button type="submit">Borrar seleccionados</button>
+  </form>
+
+  <script type="module">
+    function showAlert(options) {
+      if (window.Swal) {
+        window.Swal.fire(options);
+      } else {
+        alert(options.text || options.title || 'Ocurrió un error.');
+      }
+    }
+
+    const form = document.getElementById('form-borrar-datos');
+    const chkKm = document.getElementById('chk-kilometraje');
+    const chkConfigGas = document.getElementById('chk-config-gasolina');
+    const chkConfigAceite = document.getElementById('chk-config-aceite');
+    const chkResumen = document.getElementById('chk-resumen');
+
+    if (form && chkKm && chkConfigGas && chkConfigAceite && chkResumen) {
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+
+        const seleccionados = [
+          chkKm.checked,
+          chkConfigGas.checked,
+          chkConfigAceite.checked,
+          chkResumen.checked
+        ].some(Boolean);
+
+        if (!seleccionados) {
+          showAlert({
+            icon: 'info',
+            title: 'Nada seleccionado',
+            text: 'Marca al menos una opción para borrar datos.'
+          });
+          return;
+        }
+
+        const detalles = [];
+        if (chkKm.checked) detalles.push('registros de kilometraje');
+        if (chkConfigGas.checked) detalles.push('configuración de gasolina');
+        if (chkConfigAceite.checked) detalles.push('configuración de aceite');
+        if (chkResumen.checked) detalles.push('resumen mensual');
+
+        const textoConfirmacion = `Se borrarán: ${detalles.join(', ')}. Esta acción no se puede deshacer.`;
+
+        if (window.Swal) {
+          window.Swal.fire({
+            icon: 'warning',
+            title: '¿Borrar datos seleccionados?',
+            text: textoConfirmacion,
+            showCancelButton: true,
+            confirmButtonText: 'Sí, borrar',
+            cancelButtonText: 'Cancelar'
+          }).then((result) => {
+            if (result.isConfirmed) {
+              aplicarBorrado();
+            }
+          });
+        } else {
+          const ok = confirm(textoConfirmacion);
+          if (ok) {
+            aplicarBorrado();
+          }
+        }
+      });
+    }
+
+    function aplicarBorrado() {
+      if (chkKm.checked) {
+        localStorage.removeItem('registrosKilometraje');
+      }
+
+      if (chkConfigGas.checked) {
+        localStorage.removeItem('configGasolina');
+        localStorage.removeItem('estadoGasolina');
+      }
+
+      if (chkConfigAceite.checked) {
+        localStorage.removeItem('configAceite');
+        localStorage.removeItem('estadoAceite');
+      }
+
+      if (chkResumen.checked) {
+        localStorage.removeItem('resumenMensualGasolina');
+      }
+
+      showAlert({
+        icon: 'success',
+        title: 'Datos borrados',
+        text: 'Se han eliminado los datos seleccionados.'
+      });
+
+      // Opcional: recargar para reflejar cambios en otras páginas cuando el usuario vuelva
+    }
+  </script>
+</BaseLayout>
+

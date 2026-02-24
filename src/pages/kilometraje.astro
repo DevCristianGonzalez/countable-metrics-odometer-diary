@@ -50,6 +50,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     const STORAGE_ACEITE_ESTADO = 'estadoAceite';
     const STORAGE_ACEITE_CONFIG = 'configAceite';
     const STORAGE_CONFIG_GASOLINA = 'configGasolina';
+    const STORAGE_GASOLINA_ESTADO = 'estadoGasolina';
     const STORAGE_RESUMEN_MENSUAL_GASOLINA = 'resumenMensualGasolina';
 
     function leerJSONSeguro(key, fallback) {
@@ -60,6 +61,14 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       } catch (e) {
         console.error('Error leyendo', key, e);
         return fallback;
+      }
+    }
+
+    function showAlert(options) {
+      if (window.Swal) {
+        window.Swal.fire(options);
+      } else {
+        alert(options.text || options.title || 'Ocurrió un error.');
       }
     }
 
@@ -95,6 +104,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         .join('');
     }
 
+    let ultimoKilometrajeFinal = null;
+
     function init() {
       // Prefijar fecha de hoy
       if (fechaInput) {
@@ -104,6 +115,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
       const registros = leerJSONSeguro(STORAGE_REGISTROS, []);
       renderTabla(registros);
+
+      if (registros.length) {
+        // Tomamos el último registro guardado
+        const ultimo = registros[registros.length - 1];
+        ultimoKilometrajeFinal = Number(ultimo.final);
+      }
     }
 
     if (form && fechaInput && inicialInput && finalInput) {
@@ -114,10 +131,33 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         const inicial = Number(inicialInput.value);
         const final = Number(finalInput.value);
 
-        if (!fecha || isNaN(inicial) || isNaN(final) || final < inicial) {
-          alert(
-            'Revisa los datos: fecha obligatoria y el kilometraje final debe ser mayor o igual al inicial.'
-          );
+        if (!fecha || isNaN(inicial) || isNaN(final)) {
+          showAlert({
+            icon: 'error',
+            title: 'Datos incompletos',
+            text: 'Revisa los datos: todos los campos son obligatorios.'
+          });
+          return;
+        }
+
+        if (final < inicial) {
+          showAlert({
+            icon: 'error',
+            title: 'Kilometraje inválido',
+            text: 'El kilometraje final debe ser mayor o igual al kilometraje inicial.'
+          });
+          return;
+        }
+
+        if (
+          ultimoKilometrajeFinal != null &&
+          inicial < Number(ultimoKilometrajeFinal)
+        ) {
+          showAlert({
+            icon: 'error',
+            title: 'Kilometraje inválido',
+            text: `El kilometraje inicial no puede ser menor que el último kilometraje final registrado (${ultimoKilometrajeFinal}).`
+          });
           return;
         }
 
@@ -149,6 +189,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         const configGasolina = leerJSONSeguro(STORAGE_CONFIG_GASOLINA, null);
         let galonesUsados = null;
         let costoGasolina = null;
+        let kmRestantesGasolina = null;
+
         if (configGasolina && configGasolina.kmPorGalon && configGasolina.precioGalon) {
           const kmPorGalon = Number(configGasolina.kmPorGalon);
           const precioGalon = Number(configGasolina.precioGalon);
@@ -158,6 +200,28 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           }
         }
 
+        // Lógica similar al aceite para recarga de gasolina,
+        // usando un único dato de referencia (kmPorGalon)
+        if (configGasolina && configGasolina.kmPorGalon) {
+          const intervaloGas = Number(configGasolina.kmPorGalon);
+          let estadoGasolina = leerJSONSeguro(STORAGE_GASOLINA_ESTADO, {
+            acumuladoDesdeUltimaRecarga: 0
+          });
+
+          const nuevoAcumuladoGas =
+            Number(estadoGasolina.acumuladoDesdeUltimaRecarga || 0) +
+            recorrido;
+          kmRestantesGasolina = Math.max(intervaloGas - nuevoAcumuladoGas, 0);
+
+          estadoGasolina.acumuladoDesdeUltimaRecarga =
+            kmRestantesGasolina === 0 ? 0 : nuevoAcumuladoGas;
+
+          localStorage.setItem(
+            STORAGE_GASOLINA_ESTADO,
+            JSON.stringify(estadoGasolina)
+          );
+        }
+
         const registros = leerJSONSeguro(STORAGE_REGISTROS, []);
         const nuevoRegistro = {
           fecha,
@@ -165,14 +229,16 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           final,
           recorrido,
           kmRestantesAceite,
-          // Igual al kilometraje final según tu preferencia
-          kmRecargaGasolina: final,
+          kmRecargaGasolina: kmRestantesGasolina,
           galonesUsados,
           costoGasolina
         };
 
         registros.push(nuevoRegistro);
         localStorage.setItem(STORAGE_REGISTROS, JSON.stringify(registros));
+
+        // Actualizamos referencia del último final
+        ultimoKilometrajeFinal = final;
 
         // Resumen mensual por gasolina
         const mesClave = fecha.slice(0, 7); // YYYY-MM

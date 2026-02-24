@@ -11,7 +11,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
   <div class="botonera">
     <a href="/kilometraje">
-      <button type="button">Introducir kilometraje diario</button>
+      <button type="button" id="btn-km-diario">Introducir kilometraje diario</button>
     </a>
 
     <a href="/configuracion-gasolina">
@@ -25,5 +25,34 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     <a href="/resumen">
       <button type="button">Ver resumen mensual</button>
     </a>
+
+    <a href="/borrar-datos">
+      <button type="button">Borrar datos</button>
+    </a>
   </div>
+
+  <script type="module">
+    const btnKm = document.getElementById('btn-km-diario');
+    if (btnKm) {
+      const configGasolina = localStorage.getItem('configGasolina');
+      const configAceite = localStorage.getItem('configAceite');
+
+      const habilitado = Boolean(configGasolina && configAceite);
+      if (!habilitado) {
+        btnKm.setAttribute('disabled', 'true');
+        btnKm.style.opacity = '0.5';
+        btnKm.style.cursor = 'not-allowed';
+        btnKm.title =
+          'Configura primero gasolina y aceite para poder introducir kilometraje diario.';
+
+        // Evitar navegación si se hace clic en el enlace
+        const parentLink = btnKm.closest('a');
+        if (parentLink) {
+          parentLink.addEventListener('click', (e) => {
+            e.preventDefault();
+          });
+        }
+      }
+    }
+  </script>
 </BaseLayout>

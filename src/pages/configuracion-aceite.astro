@@ -25,6 +25,14 @@ import BaseLayout from '../layouts/BaseLayout.astro';
     const FORM_ID = 'form-config-aceite';
     const STORAGE_KEY = 'configAceite';
 
+    function showAlert(options) {
+      if (window.Swal) {
+        window.Swal.fire(options);
+      } else {
+        alert(options.text || options.title || 'Ocurrió un error.');
+      }
+    }
+
     const form = document.getElementById(FORM_ID);
     const kmCambioAceiteInput = document.getElementById('kmCambioAceite');
 
@@ -45,6 +53,15 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         event.preventDefault();
         const kmCambioAceite = Number(kmCambioAceiteInput.value);
 
+        if (isNaN(kmCambioAceite) || kmCambioAceite <= 0) {
+          showAlert({
+            icon: 'error',
+            title: 'Dato inválido',
+            text: 'Introduce los kilómetros entre cambios de aceite.'
+          });
+          return;
+        }
+
         localStorage.setItem(
           STORAGE_KEY,
           JSON.stringify({ kmCambioAceite })
@@ -56,7 +73,11 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           JSON.stringify({ acumuladoDesdeUltimoCambio: 0 })
         );
 
-        alert('Configuración de aceite guardada.');
+        showAlert({
+          icon: 'success',
+          title: 'Guardado',
+          text: 'Configuración de aceite guardada correctamente.'
+        });
       });
     }
   </script>
