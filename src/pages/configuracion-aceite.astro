@@ -1,0 +1,63 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Configuración de aceite">
+  <h1>Configuración de aceite</h1>
+  <p>
+    Aquí puedes definir cada cuántos kilómetros se debe cambiar el aceite.
+  </p>
+  <p>
+    Muchas veces se cambia mensualmente, pero es más preciso hacerlo por
+    kilometraje según lo recomendado por la marca y tu uso real.
+  </p>
+
+  <form id="form-config-aceite">
+    <div>
+      <label for="kmCambioAceite">Kilómetros entre cambios de aceite</label>
+      <input id="kmCambioAceite" type="number" min="0" step="1" required />
+    </div>
+
+    <button type="submit">Guardar configuración</button>
+  </form>
+
+  <script type="module">
+    const FORM_ID = 'form-config-aceite';
+    const STORAGE_KEY = 'configAceite';
+
+    const form = document.getElementById(FORM_ID);
+    const kmCambioAceiteInput = document.getElementById('kmCambioAceite');
+
+    if (form && kmCambioAceiteInput) {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.kmCambioAceite != null) {
+            kmCambioAceiteInput.value = String(parsed.kmCambioAceite);
+          }
+        } catch (e) {
+          console.error('Error leyendo config aceite', e);
+        }
+      }
+
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const kmCambioAceite = Number(kmCambioAceiteInput.value);
+
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ kmCambioAceite })
+        );
+
+        // Reiniciamos el acumulado desde el último cambio
+        localStorage.setItem(
+          'estadoAceite',
+          JSON.stringify({ acumuladoDesdeUltimoCambio: 0 })
+        );
+
+        alert('Configuración de aceite guardada.');
+      });
+    }
+  </script>
+</BaseLayout>

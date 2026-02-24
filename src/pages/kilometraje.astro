@@ -1,0 +1,212 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Registro de kilometraje">
+  <h1>Registro de kilometraje</h1>
+  <p>
+    Introduce el kilometraje inicial y final para este trayecto. Al guardar se
+    calculará el recorrido y se añadirá a la tabla de abajo.
+  </p>
+
+  <form id="form-kilometraje">
+    <div>
+      <label for="fecha">Día</label>
+      <input id="fecha" type="date" required />
+    </div>
+
+    <div>
+      <label for="inicial">Kilometraje inicial</label>
+      <input id="inicial" type="number" min="0" step="0.1" required />
+    </div>
+
+    <div>
+      <label for="final">Kilometraje final</label>
+      <input id="final" type="number" min="0" step="0.1" required />
+    </div>
+
+    <button type="submit">Guardar y calcular</button>
+  </form>
+
+  <section id="tabla-kilometraje-section" style="margin-top: 2rem; display: none;">
+    <h2>Registros de kilometraje</h2>
+    <table class="tabla">
+      <thead>
+        <tr>
+          <th>Día</th>
+          <th>Kilometraje inicial</th>
+          <th>Kilometraje final</th>
+          <th>Kilómetros recorridos</th>
+          <th>Kilómetros restantes para cambio de aceite</th>
+          <th>Kilómetro recarga gasolina</th>
+        </tr>
+      </thead>
+      <tbody id="tabla-kilometraje-body"></tbody>
+    </table>
+  </section>
+
+  <script type="module">
+    const STORAGE_REGISTROS = 'registrosKilometraje';
+    const STORAGE_ACEITE_ESTADO = 'estadoAceite';
+    const STORAGE_ACEITE_CONFIG = 'configAceite';
+    const STORAGE_CONFIG_GASOLINA = 'configGasolina';
+    const STORAGE_RESUMEN_MENSUAL_GASOLINA = 'resumenMensualGasolina';
+
+    function leerJSONSeguro(key, fallback) {
+      const raw = localStorage.getItem(key);
+      if (!raw) return fallback;
+      try {
+        return JSON.parse(raw);
+      } catch (e) {
+        console.error('Error leyendo', key, e);
+        return fallback;
+      }
+    }
+
+    const form = document.getElementById('form-kilometraje');
+    const fechaInput = document.getElementById('fecha');
+    const inicialInput = document.getElementById('inicial');
+    const finalInput = document.getElementById('final');
+    const tablaSection = document.getElementById('tabla-kilometraje-section');
+    const tablaBody = document.getElementById('tabla-kilometraje-body');
+
+    function renderTabla(registros) {
+      if (!tablaSection || !tablaBody) return;
+      if (!registros.length) {
+        tablaSection.style.display = 'none';
+        tablaBody.innerHTML = '';
+        return;
+      }
+
+      tablaSection.style.display = 'block';
+      tablaBody.innerHTML = registros
+        .map(
+          (r) => `
+          <tr>
+            <td>${r.fecha}</td>
+            <td>${r.inicial}</td>
+            <td>${r.final}</td>
+            <td>${r.recorrido}</td>
+            <td>${r.kmRestantesAceite ?? ''}</td>
+            <td>${r.kmRecargaGasolina ?? ''}</td>
+          </tr>
+        `
+        )
+        .join('');
+    }
+
+    function init() {
+      // Prefijar fecha de hoy
+      if (fechaInput) {
+        const hoy = new Date().toISOString().slice(0, 10);
+        fechaInput.value = hoy;
+      }
+
+      const registros = leerJSONSeguro(STORAGE_REGISTROS, []);
+      renderTabla(registros);
+    }
+
+    if (form && fechaInput && inicialInput && finalInput) {
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+
+        const fecha = fechaInput.value;
+        const inicial = Number(inicialInput.value);
+        const final = Number(finalInput.value);
+
+        if (!fecha || isNaN(inicial) || isNaN(final) || final < inicial) {
+          alert(
+            'Revisa los datos: fecha obligatoria y el kilometraje final debe ser mayor o igual al inicial.'
+          );
+          return;
+        }
+
+        const recorrido = final - inicial;
+
+        const configAceite = leerJSONSeguro(STORAGE_ACEITE_CONFIG, null);
+        let estadoAceite = leerJSONSeguro(STORAGE_ACEITE_ESTADO, {
+          acumuladoDesdeUltimoCambio: 0
+        });
+
+        let kmRestantesAceite = null;
+        if (configAceite && configAceite.kmCambioAceite) {
+          const intervalo = Number(configAceite.kmCambioAceite);
+          const nuevoAcumulado =
+            Number(estadoAceite.acumuladoDesdeUltimoCambio || 0) + recorrido;
+          kmRestantesAceite = Math.max(intervalo - nuevoAcumulado, 0);
+
+          // Si ya se superó el intervalo, reiniciamos acumulado
+          estadoAceite.acumuladoDesdeUltimoCambio =
+            kmRestantesAceite === 0 ? 0 : nuevoAcumulado;
+
+          localStorage.setItem(
+            STORAGE_ACEITE_ESTADO,
+            JSON.stringify(estadoAceite)
+          );
+        }
+
+        // Cálculo de gasolina y costo
+        const configGasolina = leerJSONSeguro(STORAGE_CONFIG_GASOLINA, null);
+        let galonesUsados = null;
+        let costoGasolina = null;
+        if (configGasolina && configGasolina.kmPorGalon && configGasolina.precioGalon) {
+          const kmPorGalon = Number(configGasolina.kmPorGalon);
+          const precioGalon = Number(configGasolina.precioGalon);
+          if (kmPorGalon > 0 && precioGalon > 0) {
+            galonesUsados = recorrido / kmPorGalon;
+            costoGasolina = galonesUsados * precioGalon;
+          }
+        }
+
+        const registros = leerJSONSeguro(STORAGE_REGISTROS, []);
+        const nuevoRegistro = {
+          fecha,
+          inicial,
+          final,
+          recorrido,
+          kmRestantesAceite,
+          // Igual al kilometraje final según tu preferencia
+          kmRecargaGasolina: final,
+          galonesUsados,
+          costoGasolina
+        };
+
+        registros.push(nuevoRegistro);
+        localStorage.setItem(STORAGE_REGISTROS, JSON.stringify(registros));
+
+        // Resumen mensual por gasolina
+        const mesClave = fecha.slice(0, 7); // YYYY-MM
+        let resumenMensual = leerJSONSeguro(
+          STORAGE_RESUMEN_MENSUAL_GASOLINA,
+          {}
+        );
+        if (!resumenMensual[mesClave]) {
+          resumenMensual[mesClave] = {
+            kmTotales: 0,
+            galonesTotales: 0,
+            costoTotal: 0
+          };
+        }
+        resumenMensual[mesClave].kmTotales += recorrido;
+        if (galonesUsados != null) {
+          resumenMensual[mesClave].galonesTotales += galonesUsados;
+        }
+        if (costoGasolina != null) {
+          resumenMensual[mesClave].costoTotal += costoGasolina;
+        }
+        localStorage.setItem(
+          STORAGE_RESUMEN_MENSUAL_GASOLINA,
+          JSON.stringify(resumenMensual)
+        );
+
+        renderTabla(registros);
+
+        // Limpiar solo los campos numéricos para facilitar nuevo registro
+        inicialInput.value = '';
+        finalInput.value = '';
+      });
+    }
+
+    init();
+  </script>
+</BaseLayout>

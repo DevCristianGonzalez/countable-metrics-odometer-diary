@@ -1,0 +1,71 @@
+---
+import type { Kilometraje } from '../models/kilometraje';
+import { calcularRecorrido } from '../models/kilometraje';
+
+let registro: Partial<Kilometraje> = {
+  fecha: new Date().toISOString().slice(0, 10)
+};
+
+let recorrido: number | null = null;
+
+const handleSubmit = (event: SubmitEvent) => {
+  event.preventDefault();
+
+  if (
+    typeof registro.inicial === 'number' &&
+    typeof registro.final === 'number'
+  ) {
+    recorrido = calcularRecorrido({
+      inicial: registro.inicial,
+      final: registro.final
+    });
+  }
+};
+---
+
+<form on:submit={handleSubmit}>
+  <div>
+    <label for="fecha">Fecha</label>
+    <input
+      id="fecha"
+      type="date"
+      value={registro.fecha}
+      on:input={(e) => (registro.fecha = (e.target as HTMLInputElement).value)}
+      required
+    />
+  </div>
+
+  <div>
+    <label for="inicial">Kilometraje inicial</label>
+    <input
+      id="inicial"
+      type="number"
+      min="0"
+      step="0.1"
+      on:input={(e) =>
+        (registro.inicial = Number((e.target as HTMLInputElement).value))}
+      required
+    />
+  </div>
+
+  <div>
+    <label for="final">Kilometraje final</label>
+    <input
+      id="final"
+      type="number"
+      min="0"
+      step="0.1"
+      on:input={(e) =>
+        (registro.final = Number((e.target as HTMLInputElement).value))}
+      required
+    />
+  </div>
+
+  <button type="submit">Calcular recorrido</button>
+
+  {recorrido !== null && (
+    <p>
+      Recorrido: <strong>{recorrido}</strong> km
+    </p>
+  )}
+</form>
