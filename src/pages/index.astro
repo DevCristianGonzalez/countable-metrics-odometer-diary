@@ -1,58 +1,52 @@
----
-import BaseLayout from '../layouts/BaseLayout.astro';
----
+<BaseLayout title="Countable Metrics">
 
-<BaseLayout title="Countable Metrics Odometer Diary">
-  <h1>Countable Metrics Odometer Diary</h1>
-  <p>
-    Bienvenido. Aquí podrás registrar y visualizar métricas relacionadas con el
-    odómetro, combustible y aceite.
-  </p>
+  <div class="app-container">
 
-  <div class="botonera">
-    <a href="/kilometraje">
-      <button type="button" id="btn-km-diario">Introducir kilometraje diario</button>
-    </a>
+    <header class="app-header">
+      <div class="menu">☰</div>
+      <div class="title">Countable Metrics</div>
+      <div class="profile">👤</div>
+    </header>
 
-    <a href="/configuracion-gasolina">
-      <button type="button">Configuración gasolina</button>
-    </a>
+    <section class="welcome">
+      <h2>¡Bienvenido!</h2>
+      <p>Aquí tienes el resumen de tu vehículo.</p>
+    </section>
 
-    <a href="/configuracion-aceite">
-      <button type="button">Configuración aceite</button>
-    </a>
+    <section class="status-card">
+      <div class="car-icon">🚗</div>
+      <div class="estado">Estado Activo</div>
 
-    <a href="/resumen">
-      <button type="button">Ver resumen mensual</button>
-    </a>
+      <div class="odometro-box">
+        <div class="label">Última Lectura de Odómetro</div>
+        <div class="km">45,230 km</div>
+        <div class="update-row">
+          <span class="actualizado">Actualizado hace 2 horas</span>
+          <button class="btn-historial">Ver Historial</button>
+        </div>
+      </div>
+    </section>
 
-    <a href="/borrar-datos">
-      <button type="button">Borrar datos</button>
-    </a>
+    <section class="acciones">
+      <h3>Acciones Rápidas</h3>
+
+      <div class="grid">
+        <a href="/kilometraje" class="card">Registrar Viaje</a>
+        <a href="/configuracion-gasolina" class="card">Configurar Gasolina</a>
+        <a href="/configuracion-aceite" class="card">Configurar Aceite</a>
+        <a href="/resumen" class="card">Resumen Mensual</a>
+      </div>
+
+      <a href="/borrar-datos" class="delete-btn">Borrar Datos</a>
+    </section>
+
+    <nav class="bottom-nav">
+      <a class="active">Inicio</a>
+      <a>Historial</a>
+      <a>Estadísticas</a>
+      <a>Ajustes</a>
+    </nav>
+
   </div>
 
-  <script type="module">
-    const btnKm = document.getElementById('btn-km-diario');
-    if (btnKm) {
-      const configGasolina = localStorage.getItem('configGasolina');
-      const configAceite = localStorage.getItem('configAceite');
-
-      const habilitado = Boolean(configGasolina && configAceite);
-      if (!habilitado) {
-        btnKm.setAttribute('disabled', 'true');
-        btnKm.style.opacity = '0.5';
-        btnKm.style.cursor = 'not-allowed';
-        btnKm.title =
-          'Configura primero gasolina y aceite para poder introducir kilometraje diario.';
-
-        // Evitar navegación si se hace clic en el enlace
-        const parentLink = btnKm.closest('a');
-        if (parentLink) {
-          parentLink.addEventListener('click', (e) => {
-            e.preventDefault();
-          });
-        }
-      }
-    }
-  </script>
 </BaseLayout>
